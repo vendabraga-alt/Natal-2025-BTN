@@ -1,0 +1,37 @@
+
+<!doctype html>
+<html lang="pt">
+<head>
+  <meta charset="utf-8">
+  <title>Canvas + Música</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: system-ui, Arial, sans-serif; margin: 0; padding: 2rem; background: #111; color: #eee; }
+    canvas { display: block; border: 2px solid #444; background: #222; margin-bottom: 1rem; }
+    button { padding: 0.75rem 1rem; font-size: 1rem; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h1>Canvas — clicar para abrir player numa nova aba</h1>
+  <canvas id="stage" width="640" height="360"></canvas>
+  <button id="openPlayerBtn">Abrir Player e Tocar 🎵</button>
+
+  <script>
+    const BASE = 'https://vendabraga-alt.github.io/Natal-2025-BTN/';
+    const MP3_PATH = 'assets/music/minha-musica.mp3';
+    const MUSIC_URL = BASE + MP3_PATH;
+
+    const canvas = document.getElementById('stage');
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#4CAF50';
+    ctx.fillRect(20, 20, 200, 120);
+    ctx.fillStyle = '#eee';
+    ctx.font = '20px sans-serif';
+    ctx.fillText('Clique no botão para tocar música', 20, 170);
+
+    document.getElementById('openPlayerBtn').addEventListener('click', () => {
+      const playerUrl = BASE + 'player.html?src=' + encodeURIComponent(MUSIC_URL);
+      window.open(playerUrl, '_blank', 'noopener');
+       });
+  </script>
+</body>
