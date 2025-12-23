@@ -1,0 +1,182 @@
+
+<!doctype html>
+<html lang="pt">
+<head>
+  <meta charset="utf-8">
+  <title>Marcador de tempos — Abraco de Natal</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root { color-scheme: dark; }
+    body { font-family: system-ui, Arial, sans-serif; margin: 0; padding: 1rem; background: #111; color: #eee; }
+    h1 { margin: 0 0 .5rem; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .panel { border: 1px solid #444; border-radius: 10px; background: #1a1a1a; overflow: hidden; }
+    .panel header { padding: .5rem .75rem; border-bottom: 1px solid #333; font-weight: 600; }
+    .panel .content { max-height: 70vh; overflow-y: auto; padding: .5rem .75rem; }
+    audio { width: 100%; }
+    .line { padding: .35rem .25rem; opacity: .8; border-left: 3px solid transparent; }
+    .line.active { background: #263238; color: #fff; opacity: 1; border-left-color: #4CAF50; }
+    .controls { display: flex; gap: .5rem; flex-wrap: wrap; margin-top: .5rem; }
+    button { padding: .5rem .75rem; border: 0; border-radius: 8px; background: #2e7d32; color: #fff; cursor: pointer; }
+    button.secondary { background: #1e88e5; }
+    button.danger { background: #c62828; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace }
+  </style>
+</head>
+<body>
+  <h1>Marcador de tempos — "Abraco de Natal"</h1>
+
+  <div class="grid">
+    <div class="panel">
+      <header>Áudio</header>
+      <div class="content">
+        <audio id="audio" controls preload="auto"></audio>
+        <div class="controls">
+          <button id="loadLocal">Usar MP3 local (Pages)</button>
+          <button id="loadRaw" class="secondary">Usar MP3 RAW (GitHub)</button>
+          <button id="playPause">▶️/⏸️</button>
+          <button id="mark">Marcar tempo (Enter)</button>
+          <button id="exportLRC" class="secondary">Exportar LRC</button>
+          <button id="reset" class="danger">Limpar tempos</button>
+        </div>
+        <p class="mono" id="audioSrc">sem fonte</p>
+        <p>Dica: Ouve a música e carrega <strong>Enter</strong> em cada linha para gravar o tempo. Usa <strong>↑/↓</strong> para ajustar ±0.20s na linha ativa. Espaço: ▶️/⏸️.</p>
+      </div>
+    </div>
+
+    <div class="panel">
+      <header>Letra</header>
+      <div id="lyrics" class="content"></div>
+    </div>
+  </div>
+
+<script>
+const lines = [{"type": "section", "text": "Verso 1"}, {"type": "line", "t": 0.0, "text": "Eu quero ser o Pai Natal para ti,"}, {"type": "line", "t": 5.0, "text": "Porque só faz sentido se eu cuidar de ti,"}, {"type": "line", "t": 10.0, "text": "Como tu cuidas de mim, devagar, sem fugir,"}, {"type": "line", "t": 15.0, "text": "Num abraço que aquece quando o frio quer surgir."}, {"type": "line", "t": 20.0, "text": "A neve já se faz cair,"}, {"type": "line", "t": 25.0, "text": "As luzes de Natal começam a surgir,"}, {"type": "line", "t": 30.0, "text": "A cidade brilha e lembra-nos, devagar,"}, {"type": "line", "t": 35.0, "text": "Que o Natal é mais bonito quando temos amor para dar."}, {"type": "section", "text": "Pré-Refrão"}, {"type": "line", "t": 40.0, "text": "Mas o Natal não é só uma data do calendário,"}, {"type": "line", "t": 45.0, "text": "Onde tanta gente acha que deve ser solidário."}, {"type": "line", "t": 50.0, "text": "Amar e perdoar e  ajudar devia ser o ano inteiro,"}, {"type": "line", "t": 55.0, "text": "E não só quando a rua decide brilhar."}, {"type": "section", "text": "Refrão — com espaço para coreografia"}, {"type": "line", "t": 60.0, "text": "Eu quero ser o Pai Natal para ti,"}, {"type": "line", "t": 65.0, "text": "Quero poder-te abraçar, amar e fazer-te sorrir."}, {"type": "line", "t": 70.0, "text": "Tu não estás sozinho aqui."}, {"type": "line", "t": 75.0, "text": "Eu quero ser o Pai Natal para ti,"}, {"type": "line", "t": 80.0, "text": "Quero abraçar-te, sentir-te a ti,"}, {"type": "line", "t": 85.0, "text": "Fazer-te sentir amado —"}, {"type": "line", "t": 90.0, "text": "Tu não estás sozinho."}, {"type": "line", "t": 95.0, "text": "E agora roda para um lado e abraça,"}, {"type": "line", "t": 100.0, "text": "Roda para o outro e abraça também."}, {"type": "line", "t": 105.0, "text": "Vamos espalhar o espírito do Natal…"}, {"type": "line", "t": 110.0, "text": "Deixa o teu coração aquecer outro coração,"}, {"type": "line", "t": 115.0, "text": "Pois abraços não se pagam — e podem ser solução"}, {"type": "line", "t": 120.0, "text": "Para quem só sabe o que é solidão."}, {"type": "section", "text": "Verso 2"}, {"type": "line", "t": 125.0, "text": "Há quem passe o Natal a chorar,"}, {"type": "line", "t": 130.0, "text": "Famílias inteiras sem mesa para montar."}, {"type": "line", "t": 135.0, "text": "Há crianças que adormecem sem sonhar,"}, {"type": "line", "t": 140.0, "text": "Porque o presente que pedem é alguém que as possa amar."}, {"type": "line", "t": 145.0, "text": "Se a tua história está num lar, não te esqueças que um abraço"}, {"type": "line", "t": 150.0, "text": "Pode muita saudade — e muitas mágoas — tratar."}, {"type": "line", "t": 155.0, "text": "E nós aqui, com a sorte de ter"}, {"type": "line", "t": 160.0, "text": "Um colo, uma casa e alguém com abraços para aquecer…"}, {"type": "line", "t": 165.0, "text": "Por isso hoje, antes de tudo, quero agradecer:"}, {"type": "line", "t": 170.0, "text": "Estarmos vivos… para o Natal acontecer."}, {"type": "section", "text": "Pré-Refrão"}, {"type": "line", "t": 175.0, "text": "Mas o Natal não é só uma data do calendário,"}, {"type": "line", "t": 180.0, "text": "Onde tanta gente acha que deve ser solidário."}, {"type": "line", "t": 185.0, "text": "Amar e perdoar e  ajudar devia ser o ano inteiro,"}, {"type": "line", "t": 190.0, "text": "E não só quando a rua decide brilhar."}, {"type": "section", "text": "Refrão Final — versão completa + coreografia"}, {"type": "line", "t": 195.0, "text": "E agora roda para um lado e abraça,"}, {"type": "line", "t": 200.0, "text": "Roda para o outro e abraça também."}, {"type": "line", "t": 205.0, "text": "Vamos espalhar o espírito do Natal…"}, {"type": "line", "t": 210.0, "text": "Deixa o teu coração aquecer outro coração,"}, {"type": "line", "t": 215.0, "text": "Pois abraços não se pagam — e podem ser solução"}, {"type": "line", "t": 220.0, "text": "Para quem só sabe o que é solidão."}, {"type": "line", "t": 225.0, "text": "E agora roda para um lado e abraça a teus pais, e sente-os,"}, {"type": "line", "t": 230.0, "text": "Roda para o outro e abraça também o teu patudo, que é amor  puro."}, {"type": "line", "t": 235.0, "text": "E agora roda para um lado e abraça a teus filhos,"}, {"type": "line", "t": 240.0, "text": "Roda para o outro… ao teu amor que esta sempre contigo, nas derrotas e vitórias!"}, {"type": "line", "t": 245.0, "text": "E agora roda para um lado e abraça os avós,"}, {"type": "line", "t": 250.0, "text": "Roda para o outro e abraça também os irmãos, que são metade do teu coração;"}, {"type": "line", "t": 255.0, "text": "E agora roda para um lado e abraça os teus sobrinhos,"}, {"type": "line", "t": 260.0, "text": "Roda para o outro e abraça também os amigos"}, {"type": "line", "t": 265.0, "text": "E agora roda para um lado e abraça os teus padrinhos,"}, {"type": "line", "t": 270.0, "text": "Roda para o outro e abraça também os teus tios."}, {"type": "line", "t": 275.0, "text": "E agora roda para um lado e abraça os teus vizinhos,"}, {"type": "line", "t": 280.0, "text": "Roda para o outro e abraça também  um desconhecidos."}, {"type": "line", "t": 285.0, "text": "E agora roda para um lado e abraça quem partiu — sente-o perto não chores,"}, {"type": "line", "t": 290.0, "text": "Roda para o outro… e abraça-te a ti, por dentro."}, {"type": "line", "t": 295.0, "text": "Abraça… abraça… abraça…"}, {"type": "line", "t": 300.0, "text": "Um abraço muda um dia."}, {"type": "line", "t": 305.0, "text": "Um abraço muda uma vida."}, {"type": "line", "t": 310.0, "text": "Um abraço lembra-te, sempre:"}, {"type": "line", "t": 315.0, "text": "Ninguém está sozinho.    Autor: Loyz Braga"}];
+
+const audio = document.getElementById('audio');
+const audioSrcEl = document.getElementById('audioSrc');
+const lyricsEl = document.getElementById('lyrics');
+let idx = 0; // current line index among "line" items
+let lineRefs = []; // DOM refs of line type
+
+function render() {
+  lyricsEl.innerHTML = '';
+  lineRefs = [];
+  lines.forEach((it, i) => {
+    if (it.type === 'section') {
+      const s = document.createElement('div');
+      s.textContent = `[${it.text}]`;
+      s.style.opacity = 0.7;
+      lyricsEl.appendChild(s);
+    } else {
+      const d = document.createElement('div');
+      d.className = 'line';
+      d.dataset.i = i;
+      d.dataset.t = it.t ?? '';
+      d.innerHTML = '<span class="mono">' + (it.t !== undefined ? it.t.toFixed(2) : '--.--') + '</span> — ' + it.text;
+      lyricsEl.appendChild(d);
+      lineRefs.push(d);
+    }
+  });
+  activateIdx(idx);
+}
+
+function activateIdx(newIdx) {
+  lineRefs.forEach(el => el.classList.remove('active'));
+  if (lineRefs[newIdx]) {
+    lineRefs[newIdx].classList.add('active');
+    lineRefs[newIdx].scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+}
+
+function updateLineTime(i, t) {
+  // find corresponding entry index among full list
+  let count = -1; let target = -1;
+  for (let k=0; k<lines.length; k++) {
+    if (lines[k].type === 'line') {
+      count += 1;
+      if (count === i) { target = k; break; }
+    }
+  }
+  if (target >= 0) {
+    lines[target].t = t;
+    const el = lineRefs[i];
+    if (el) { el.dataset.t = t; el.innerHTML = '<span class="mono">' + t.toFixed(2) + '</span> — ' + lines[target].text; }
+  }
+}
+
+function exportLRC() {
+  const header = [
+    '[ti:Abraco de Natal]',
+    '[ar:Loyz Braga]',
+    '[al:Natal 2025 BTN]'
+  ];
+  const out = [];
+  out.push(...header, '');
+  let curSec = 0;
+  function fmt(t) {
+    const m = Math.floor(t/60), s = Math.floor(t%60), cs = Math.round((t-Math.floor(t))*100);
+    return m.toString().padStart(2,'0') + ':' + s.toString().padStart(2,'0') + '.' + cs.toString().padStart(2,'0');
+  }
+  for (const it of lines) {
+    if (it.type === 'section') out.push('[section:' + it.text + ']');
+    else out.push('[' + fmt(it.t || curSec) + '] ' + it.text);
+  }
+  const blob = new Blob([out.join('
+')+'
+'], { type: 'text/plain;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'abraco-de-natal.lrc';
+  a.click();
+}
+
+// Controls
+const loadLocalBtn = document.getElementById('loadLocal');
+const loadRawBtn   = document.getElementById('loadRaw');
+const playPauseBtn = document.getElementById('playPause');
+const markBtn      = document.getElementById('mark');
+const resetBtn     = document.getElementById('reset');
+const exportBtn    = document.getElementById('exportLRC');
+
+loadLocalBtn.onclick = () => {
+  const src = 'assets/music/Abraco-de-Natal.mp3';
+  audio.src = src; audioSrcEl.textContent = src;
+};
+loadRawBtn.onclick = () => {
+  const src = 'https://raw.githubusercontent.com/vendabraga-alt/Natal-2025-BTN/main/assets/music/Abraco-de-Natal.mp3';
+  audio.src = src; audioSrcEl.textContent = src;
+};
+playPauseBtn.onclick = () => { audio.paused ? audio.play() : audio.pause(); };
+markBtn.onclick = () => {
+  const t = audio.currentTime;
+  updateLineTime(idx, t);
+  if (idx < lineRefs.length-1) { idx += 1; activateIdx(idx); }
+};
+resetBtn.onclick = () => {
+  let i = 0;
+  for (let k=0; k<lines.length; k++) {
+    if (lines[k].type === 'line') { lines[k].t = undefined; updateLineTime(i, 0); i += 1; }
+  }
+  idx = 0; activateIdx(idx);
+};
+exportBtn.onclick = exportLRC;
+
+// Keyboard shortcuts
+window.addEventListener('keydown', (ev) => {
+  if (ev.code === 'Space') { ev.preventDefault(); playPauseBtn.click(); }
+  if (ev.code === 'Enter') { ev.preventDefault(); markBtn.click(); }
+  if (ev.code === 'ArrowUp') { ev.preventDefault();
+    const t = parseFloat(lineRefs[idx].dataset.t || audio.currentTime) - 0.20; updateLineTime(idx, Math.max(t, 0));
+  }
+  if (ev.code === 'ArrowDown') { ev.preventDefault();
+    const t = parseFloat(lineRefs[idx].dataset.t || audio.currentTime) + 0.20; updateLineTime(idx, t);
+  }
+  if (ev.code === 'ArrowRight') { ev.preventDefault(); if (idx < lineRefs.length-1) { idx += 1; activateIdx(idx); } }
+  if (ev.code === 'ArrowLeft')  { ev.preventDefault(); if (idx > 0) { idx -= 1; activateIdx(idx); } }
+});
+
+render();
+</script>
+</body>
+</html>
