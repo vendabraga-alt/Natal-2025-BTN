@@ -1,4 +1,5 @@
 
+
 <!doctype html>
 <html lang="pt">
 <head>
@@ -17,10 +18,11 @@
   <button id="openPlayerBtn">Abrir Player e Tocar 🎵</button>
 
   <script>
-    const BASE = 'https://vendabraga-alt.github.io/Natal-2025-BTN/';
-    const MP3_PATH = 'assets/music/minha-musica.mp3';
+    const BASE = 'https://vendabraga-alt.github.io/Natal-2025-BTN/'; // já que está no GitHub Pages
+    const MP3_PATH = 'assets/music/Abraço de Natal.mp3';
     const MUSIC_URL = BASE + MP3_PATH;
 
+    // Canvas apenas para demonstrar
     const canvas = document.getElementById('stage');
     const ctx = canvas.getContext('2d');
     ctx.fillStyle = '#4CAF50';
@@ -30,8 +32,8 @@
     ctx.fillText('Clique no botão para tocar música', 20, 170);
 
     document.getElementById('openPlayerBtn').addEventListener('click', () => {
-      const playerUrl = BASE + 'player.html?src=' + encodeURIComponent(MUSIC_URL);
+      const playerUrl = BASE + 'player.html?src=' + encodeURIComponent(MUSIC_URL) + '&autoplay=1';
       window.open(playerUrl, '_blank', 'noopener');
-       });
+    });
   </script>
-</body>
+</</body>
