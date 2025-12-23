@@ -4,36 +4,87 @@
 <html lang="pt">
 <head>
   <meta charset="utf-8">
-  <title>Canvas + Música</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1">  <title>Canvas + Música (mesma página)</title>
   <style>
+    :root { color-scheme: dark; }
     body { font-family: system-ui, Arial, sans-serif; margin: 0; padding: 2rem; background: #111; color: #eee; }
     canvas { display: block; border: 2px solid #444; background: #222; margin-bottom: 1rem; }
-    button { padding: 0.75rem 1rem; font-size: 1rem; cursor: pointer; }
+    .actions { display: flex; gap: .75rem; flex-wrap: wrap; }
+    button {
+      padding: 0.75rem 1rem;
+      font-size: 1rem;
+      cursor: pointer;
+      border: 0;
+      border-radius: 10px;
+      background: #2e7d32;
+      color: #fff;
+      box-shadow: 0 6px 16px rgba(0,0,0,.35);
+    }
+    button:hover { background: #1b5e20; }
+    #status { margin-top: .75rem; opacity: .8; }
+    audio { width: 100%; max-width: 720px; margin-top: 1rem; }
   </style>
 </head>
 <body>
-  <h1>Canvas — clicar para abrir player numa nova aba</h1>
+  <h1>Canvas — tocar música na mesma página</h1>
   <canvas id="stage" width="640" height="360"></canvas>
-  <button id="openPlayerBtn">Abrir Player e Tocar 🎵</button>
+
+  <div class="actions">
+    <button id="playBtn">Tocar 🎵</button>
+    <button id="pauseBtn">Pausar ⏸️</button>
+  </div>
+
+  <!-- Mostre controls se quiser ver o player; senão mantenha controls oculto removendo o atributo -->
+  <audio id="audioPlayer" controls preload="auto" playsinline></audio>
+  <div id="status"></div>
 
   <script>
-    const BASE = 'https://vendabraga-alt.github.io/Natal-2025-BTN/'; // já que está no GitHub Pages
-    const MP3_PATH = 'assets/music/Abraço de Natal.mp3';
-    const MUSIC_URL = BASE + MP3_PATH;
+    // Caminho base relativo (está tudo no mesmo repositório/host)
+    const BASE = './';
+    const MP3_FILE = 'assets/music/Abraço de Natal.mp3';
+    const MUSIC_URL = BASE + MP3_FILE;
 
-    // Canvas apenas para demonstrar
+    // Canvas de exemplo
     const canvas = document.getElementById('stage');
     const ctx = canvas.getContext('2d');
     ctx.fillStyle = '#4CAF50';
     ctx.fillRect(20, 20, 200, 120);
     ctx.fillStyle = '#eee';
     ctx.font = '20px sans-serif';
-    ctx.fillText('Clique no botão para tocar música', 20, 170);
+    ctx.fillText('Clique em "Tocar 🎵" para reproduzir a música', 20, 170);
 
-    document.getElementById('openPlayerBtn').addEventListener('click', () => {
-      const playerUrl = BASE + 'player.html?src=' + encodeURIComponent(MUSIC_URL) + '&autoplay=1';
-      window.open(playerUrl, '_blank', 'noopener');
+    // Player
+    const audio = document.getElementById('audioPlayer');
+    const playBtn = document.getElementById('playBtn');
+    const pauseBtn = document.getElementById('pauseBtn');
+    const statusEl = document.getElementById('status');
+
+    const setStatus = (msg) => { statusEl.textContent = msg || ''; console.log('[Player]', msg); };
+
+    // Defina o src com URL encoding para acentos/espaços
+    const encodedSrc = BASE + encodeURIComponent('assets/music/Abraço de Natal.mp3').replace(/%2F/g, '/');
+    audio.src = encodedSrc;
+    setStatus('Ficheiro preparado: ' + encodedSrc);
+
+    playBtn.addEventListener('click', async () => {
+      try {
+        // Gesto do utilizador na MESMA aba → permitido
+        await audio.play();
+        setStatus('A reproduzir ✅');
+      } catch (err) {
+        console.error(err);
+        setStatus('Não foi possível reproduzir. Verifique o Console (F12).');
+      }
     });
+
+    pauseBtn.addEventListener('click', () => {
+      audio.pause();
+      setStatus('Pausado ⏸️');
+    });
+
+    // Opcional: feedback ao terminar
+    audio.addEventListener('ended', () => setStatus('Terminou a reprodução.'));
+    audio.addEventListener('error', () => setStatus('Erro ao carregar o áudio. Confirme o caminho e nome do    audio.addEventListener('error', () => setStatus('Erro ao carregar o áudio. Confirme o caminho e nome do ficheiro.'));
   </script>
-</</body>
+</body>
+
