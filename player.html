@@ -6,21 +6,76 @@
   <title>Player</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body { font-family: Arial, sans-serif; background: #111; color: #eee; text-align: center; padding: 2rem; }
-    audio { width: 80%; margin-top: 2rem; }
+    :root {
+      color-scheme: dark;
+    }
+    body { font-family: system-ui, Arial, sans-serif; background: #111; color: #eee; text-align: center; padding: 2rem; }
+    .hidden { display: none; }
+    audio { width: 90%; max-width: 720px; margin-top: 1.25rem; }
+    #playFallback {
+      margin-top: 2rem;
+      padding: 1rem 1.5rem;
+      font-size: 1.125rem;
+      border: 0;
+      border-radius: 10px;
+      background: #2e7d32;
+      color: #fff;
+      cursor: pointer;
+      box-shadow: 0 6px 16px rgba(0,0,0,.35);
+    }
+    #playFallback:hover { background: #1b5e20; }
+    #status { opacity: .8; margin-top: .75rem; font-size: .95rem; }
   </style>
 </head>
 <body>
   <h1>🎵 Tocando sua música</h1>
-  <audio id="audioPlayer" controls autoplay></audio>
+  <audio id="audioPlayer" controls preload="auto" playsinline></audio>
+  <button id="playFallback" class="hidden">▶️ Tocar</button>
+  <div id="status"></div>
 
   <script>
-    const params = new URLSearchParams(window.location.search);
-    const src = params.get('src');
-    if (src) {
-      document.getElementById('audioPlayer').src = src;
-    } else {
-      document.body.innerHTML += '<p>Erro: Nenhuma música encontrada.</p>';
+    const params = new URLSearchParams(location.search);
+    const src = params.get('src');       // valor já vem URL-encoded do index
+    const wantsAutoplay = params.get('autoplay') === '1';
+
+    const audio = document.getElementById('audioPlayer');
+    const playBtn = document.getElementById('playFallback');
+    const statusEl = document.getElementById('status');
+
+    function setStatus(msg) {
+      statusEl.textContent = msg || '';
+      console.log('[Player]', msg);
     }
-  </  </script>
+
+    if (!src) {
+      setStatus('Erro: Nenhuma música encontrada no parâmetro "src".');
+    } else {
+      // Coloca o src diretamente; o navegador trata o URL-encoded
+      audio.src = src;
+      setStatus('Ficheiro carregado: ' + src);
+
+      const tryPlay = async (reason) => {
+        try {
+          setStatus('A iniciar reprodução' + (reason ? ` (${reason})` : '') + '...');
+          await audio.play();
+          setStatus('A reproduzir ✅');
+          playBtn.classList.add('hidden');
+        } catch (err) {
+          console.error('Autoplay bloqueado ou erro ao reproduzir:', err);
+          setStatus('Autoplay bloqueado pelo navegador. Clique em "Tocar" para iniciar.');
+          playBtn.classList.remove('hidden');
+        }
+      };
+
+      // Se veio com autoplay=1, tentamos já
+      if (wantsAutoplay) {
+        // Pequeno atraso pode ajudar em alguns browsers
+        setTimeout(() => tryPlay('autoplay'), 50);
+      }
+
+      // Fallback explícito
+      playBtn.addEventListener('click', () => tryPlay('gesto do utilizador'));
+    }
+  </script>
 </body>
+</html>
