@@ -3,7 +3,7 @@
 <html lang="pt">
 <head>
   <meta charset="utf-8">
-  <title>Natal 2025 — Canvas + Música (mesma página)</title>
+  <title>Natal 2025 — Canvas + Música (auto-detecção)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     :root { color-scheme: dark; }
@@ -26,18 +26,10 @@
     #pauseBtn { background: #1e88e5; }
     #pauseBtn:hover { background: #1565c0; }
     audio { width: 100%; max-width: 720px; margin-top: .5rem; }
-
-    .card {
-      margin-top: .75rem;
-      padding: .75rem 1rem;
-      border: 1px solid #444;
-      border-radius: 10px;
-      background: #1a1a1a;
-      font-size: .95rem;
-    }
-    .ok  { color: #9ccc65; }
-    .err { color: #ef5350; }
-    .mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .card { margin-top: .75rem; padding: .75rem 1rem; border: 1px solid #444; border-radius: 10px; background: #1a1a1a; font-size: .95rem; }
+    .ok { color: #9ccc65; } .err { color: #ef5350; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    ul { margin: .25rem 0 0 .5rem; padding-left: 1rem; }
   </style>
 </head>
 <body>
@@ -53,100 +45,79 @@
   <audio id="audioPlayer" controls preload="auto" playsinline></audio>
 
   <div class="card">
-    <div><strong>Estado:</strong> <span id="status">A verificar MP3…</span></div>
+    <div><strong>Estado:</strong> <span id="status">A procurar o ficheiro MP3…</span></div>
     <div class="mono">Base URL: <span id="baseUrl"></span></div>
-    <div class="mono">MP3 path: <span id="mp3Path"></span></div>
-    <div class="mono">MP3 request: <span id="mp3Req"></span></div>
-    <div class="mono">Audio src final: <span id="audioSrc"></span></div>
+    <div><strong>Caminhos testados:</strong>
+      <ul id="tested"></ul>
+    </div>
+    <div class="mono">Escolhido: <span id="chosen"></span></div>
   </div>
 
   <script>
-    // ===== CONFIG =====
-    // 👉 Caminho relativo exato do ficheiro no repositório
-    const MP3_PATH = 'assets/music/Abraco-de-Natal.mp3';
-
-    // ===== CANVAS (apenas visual) =====
-    const canvas = document.getElementById('stage');
-    const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#4CAF50';
-    ctx.fillRect(20, 20, 200, 120);
-    ctx.fillStyle = '#eee';
-    ctx.font = '20px sans-serif';
-    ctx.fillText('Clique em "Tocar 🎵" para reproduzir a música', 20, 170);
-
-    // ===== ELEMENTOS =====
-    const audio   = document.getElementById('audioPlayer');
-    const playBtn = document.getElementById('playBtn');
-    const pauseBtn= document.getElementById('pauseBtn');
-    const statusEl= document.getElementById('status');
-    const baseEl  = document.getElementById('baseUrl');
-    const pathEl  = document.getElementById('mp3Path');
-    const reqEl   = document.getElementById('mp3Req');
-    const srcEl   = document.getElementById('audioSrc');
+    // === Configuração de candidatos (ordem de prioridade) ===
+    const CANDIDATES = [
+      'assets/music/Abraco-de-Natal.mp3',  // esperado
+      'assets/music/abraco-de-natal.mp3',  // tudo minúsculo
+      'assets/Music/Abraco-de-Natal.mp3',  // pasta com M maiúsculo
+      'assets/music/Abraco-de-Natal.MP3',  // extensão maiúscula
+      'Abraco-de-Natal.mp3',               // no diretório raiz (fallback)
+      // Como último recurso, tentar RAW (cross-origin funciona para <audio>):
+      'https://raw.githubusercontent.com/vendabraga-alt/Natal-2025-BTN/main/assets/music/Abraco-de-Natal.mp3'
+    ];
 
     const baseUrl = location.origin + location.pathname.replace(/index\.html$/, '');
-    baseEl.textContent = baseUrl;
-    pathEl.textContent = MP3_PATH;
+    document.getElementById('baseUrl').textContent = baseUrl;
 
-    const setStatus = (msg, cls) => {
-      statusEl.textContent = msg || '';
-      statusEl.className = cls || '';
-      console.log('[Player]', msg);
-    };
+    const testedEl = document.getElementById('tested');
+    const chosenEl = document.getElementById('chosen');
+    const statusEl = document.getElementById('status');
+    const setStatus = (msg, cls) => { statusEl.textContent = msg; statusEl.className = cls || ''; console.log('[Status]', msg); };
 
-    // ===== Verificar o MP3 (HEAD) + preparar src =====
+    // Canvas (visual)
+    const ctx = document.getElementById('stage').getContext('2d');
+    ctx.fillStyle = '#4CAF50'; ctx.fillRect(20, 20, 200, 120);
+    ctx.fillStyle = '#eee'; ctx.font = '20px sans-serif';
+    ctx.fillText('Clique em "Tocar 🎵" para reproduzir a música', 20, 170);
+
+    const audio = document.getElementById('audioPlayer');
+    const playBtn = document.getElementById('playBtn');
+    const pauseBtn = document.getElementById('pauseBtn');
+
+    // Tenta candidatos em série até obter HTTP 200
     (async () => {
-      try {
-        const absoluteHeadUrl = new URL(MP3_PATH, baseUrl).href;
-        reqEl.textContent = absoluteHeadUrl;
+      for (const path of CANDIDATES) {
+        const absolute = new URL(path, baseUrl).href;
+        const li = document.createElement('li');
+        li.className = 'mono';
+        li.textContent = absolute + ' …';
+        testedEl.appendChild(li);
 
-        const r = await fetch(MP3_PATH, { method: 'HEAD', cache: 'no-store' });
-        if (!r.ok) {
-          throw new Error(`MP3 não encontrado. HTTP ${r.status}. Verifique nome/pasta/caso.`);
+        try {
+          const res = await fetch(absolute, { method: 'HEAD', cache: 'no-store' });
+          li.textContent = absolute + ' → ' + res.status;
+          if (res.ok) {
+            const chosen = absolute + (absolute.includes('raw.githubusercontent.com') ? '' : ('?v=' + Date.now()));
+            audio.src = chosen;
+            chosenEl.textContent = chosen;
+            setStatus('Encontrado ✅ (' + res.status + '). Pronto para tocar.', 'ok');
+            playBtn.disabled = false; pauseBtn.disabled = false;
+            return;
+          }
+        } catch (e) {
+          li.textContent = absolute + ' → erro de rede';
         }
-
-        // cache-buster para evitar servir versão antiga
-        const finalSrc = MP3_PATH + '?v=' + Date.now();
-        audio.src = finalSrc;
-        audio.preload = 'auto';
-
-        srcEl.textContent = new URL(finalSrc, baseUrl).href;
-        setStatus('MP3 encontrado (200). Pronto para tocar.', 'ok');
-
-        playBtn.disabled = false;
-        pauseBtn.disabled = false;
-      } catch (err) {
-        console.error(err);
-        setStatus('❌ ' + err.message, 'err');
-        srcEl.textContent = '(não definido — erro ao localizar ficheiro)';
-        playBtn.disabled = true;
-        pauseBtn.disabled = true;
       }
+      setStatus('❌ Nenhum dos caminhos respondeu 200. Corrige nome/pasta/caso no repositório.', 'err');
     })();
 
-    // ===== Controlos =====
     playBtn.addEventListener('click', async () => {
-      try {
-        await audio.play();   // gesto do utilizador na MESMA aba → permitido
-        setStatus('A reproduzir ✅', 'ok');
-      } catch (err) {
-        console.error(err);
-        setStatus('Não foi possível reproduzir. Abra F12 → Console/Network.', 'err');
-      }
+      try { await audio.play(); setStatus('A reproduzir ✅', 'ok'); }
+      catch (e) { console.error(e); setStatus('Não foi possível reproduzir (ver Console).', 'err'); }
     });
+    pauseBtn.addEventListener('click', () => audio.pause());
 
-    pauseBtn.addEventListener('click', () => {
-      audio.pause();
-      setStatus('Pausado ⏸️');
-    });
-
-    audio.addEventListener('loadedmetadata', () => {
-      const dur = isFinite(audio.duration) ? audio.duration.toFixed(1) + 's' : 'desconhecida';
-      setStatus('Carregado. Duração: ' + dur);
-    });
-    audio.addEventListener('error', () => setStatus('Erro ao carregar áudio (Network/Console).', 'err'));
-    audio.addEventListener('ended', () => setStatus('Terminou a reprodução.'));
+    audio.addEventListener('error',  () => setStatus('Erro no carregamento do áudio.', 'err'));
+    audio.addEventListener('loadedmetadata', () => setStatus('Carregado. Duração ~ ' + (isFinite(audio.duration) ? audio.duration.toFixed(1)+'s' : 'desconhecida')));
   </script>
-</</body>
-
-
+</body>
+</html>
