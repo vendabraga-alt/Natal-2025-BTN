@@ -1,15 +1,16 @@
 
-
 <!doctype html>
 <html lang="pt">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">  <title>Canvas + Música (mesma página)</title>
+  <title>Natal 2025 — Canvas + Música (mesma página)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     :root { color-scheme: dark; }
     body { font-family: system-ui, Arial, sans-serif; margin: 0; padding: 2rem; background: #111; color: #eee; }
-    canvas { display: block; border: 2px solid #444; background: #222; margin-bottom: 1rem; }
-    .actions { display: flex; gap: .75rem; flex-wrap: wrap; }
+    h1 { margin: 0 0 1rem; }
+    canvas { display: block; border: 2px solid #444; background: #222; margin-bottom: 1rem; width: 640px; height: 360px; }
+    .actions { display: flex; gap: .75rem; flex-wrap: wrap; margin-bottom: .75rem; }
     button {
       padding: 0.75rem 1rem;
       font-size: 1rem;
@@ -21,12 +22,16 @@
       box-shadow: 0 6px 16px rgba(0,0,0,.35);
     }
     button:hover { background: #1b5e20; }
-    #status { margin-top: .75rem; opacity: .8; }
-    audio { width: 100%; max-width: 720px; margin-top: 1rem; }
+    button:disabled { opacity: .6; cursor: not-allowed; }
+    #pauseBtn { background: #1e88e5; }
+    #pauseBtn:hover { background: #1565c0; }
+    #status { margin-top: .5rem; opacity: .85; min-height: 1.25rem; }
+    audio { width: 100%; max-width: 720px; margin-top: .5rem; }
   </style>
 </head>
 <body>
   <h1>Canvas — tocar música na mesma página</h1>
+
   <canvas id="stage" width="640" height="360"></canvas>
 
   <div class="actions">
@@ -34,17 +39,17 @@
     <button id="pauseBtn">Pausar ⏸️</button>
   </div>
 
-  <!-- Mostre controls se quiser ver o player; senão mantenha controls oculto removendo o atributo -->
+  <!-- Mostre os controlos para facilitar debug; pode remover o atributo 'controls' se quiser ocultar -->
   <audio id="audioPlayer" controls preload="auto" playsinline></audio>
   <div id="status"></div>
 
   <script>
-    // Caminho base relativo (está tudo no mesmo repositório/host)
-    const BASE = './';
-    const MP3_FILE = 'assets/music/Abraço de Natal.mp3';
-    const MUSIC_URL = BASE + MP3_FILE;
+    // ====== CONFIGURAÇÃO ======
+    // Caminho relativo SEM barra inicial (essencial para GitHub Pages de projeto)
+    // 👉 nome EXATO do ficheiro no repositório:
+    const MP3_PATH = 'assets/music/Abraco-de-Natal.mp3';
 
-    // Canvas de exemplo
+    // ====== CANVAS (exemplo visual) ======
     const canvas = document.getElementById('stage');
     const ctx = canvas.getContext('2d');
     ctx.fillStyle = '#4CAF50';
@@ -53,7 +58,7 @@
     ctx.font = '20px sans-serif';
     ctx.fillText('Clique em "Tocar 🎵" para reproduzir a música', 20, 170);
 
-    // Player
+    // ====== PLAYER ======
     const audio = document.getElementById('audioPlayer');
     const playBtn = document.getElementById('playBtn');
     const pauseBtn = document.getElementById('pauseBtn');
@@ -61,19 +66,33 @@
 
     const setStatus = (msg) => { statusEl.textContent = msg || ''; console.log('[Player]', msg); };
 
-    // Defina o src com URL encoding para acentos/espaços
-    const encodedSrc = BASE + encodeURIComponent('assets/music/Abraço de Natal.mp3').replace(/%2F/g, '/');
-    audio.src = encodedSrc;
-    setStatus('Ficheiro preparado: ' + encodedSrc);
+    // 1) Verificar se o ficheiro existe (HEAD) e preparar o src com cache-buster
+    (async () => {
+      try {
+        const r = await fetch(MP3_PATH, { method: 'HEAD', cache: 'no-store' });
+        if (!r.ok) {
+          throw new Error('MP3 não encontrado (' + r.status + '). Verifique nome/caminho.');
+        }
+        // Força atualização evitando versões em cache do HTML/asset
+        audio.src = MP3_PATH + '?v=' + Date.now();
+        audio.preload = 'auto';
+        setStatus('MP3 encontrado. Pronto para tocar.');
+      } catch (err) {
+        console.error(err);
+        setStatus('❌ ' + err.message);
+        playBtn.disabled = true;
+        pauseBtn.disabled = true;
+      }
+    })();
 
+    // 2) Controlos
     playBtn.addEventListener('click', async () => {
       try {
-        // Gesto do utilizador na MESMA aba → permitido
-        await audio.play();
+        await audio.play(); // gesto do utilizador na MESMA aba → permitido
         setStatus('A reproduzir ✅');
       } catch (err) {
         console.error(err);
-        setStatus('Não foi possível reproduzir. Verifique o Console (F12).');
+        setStatus('Não foi possível reproduzir. Veja o Console (F12).');
       }
     });
 
@@ -82,9 +101,12 @@
       setStatus('Pausado ⏸️');
     });
 
-    // Opcional: feedback ao terminar
-    audio.addEventListener('ended', () => setStatus('Terminou a reprodução.'));
-    audio.addEventListener('error', () => setStatus('Erro ao carregar o áudio. Confirme o caminho e nome do    audio.addEventListener('error', () => setStatus('Erro ao carregar o áudio. Confirme o caminho e nome do ficheiro.'));
+    // 3) Eventos úteis para debug
+    audio.addEventListener('loadedmetadata', () => {
+      const dur = isFinite(audio.duration) ? audio.duration.toFixed(1) + 's' : 'desconhecida';
+      setStatus('Carregado. Duração: ' + dur);
+    });
+    audio.addEventListener('error', () => setStatus('Erro ao carregar áudio (abra F12 → Network/Console).'));
+    audio.addEvent    audio.addEventListener('ended', () => setStatus('Terminou a reprodução.'));
   </script>
 </body>
-
