@@ -25,8 +25,19 @@
     button:disabled { opacity: .6; cursor: not-allowed; }
     #pauseBtn { background: #1e88e5; }
     #pauseBtn:hover { background: #1565c0; }
-    #status { margin-top: .5rem; opacity: .85; min-height: 1.25rem; }
     audio { width: 100%; max-width: 720px; margin-top: .5rem; }
+
+    .card {
+      margin-top: .75rem;
+      padding: .75rem 1rem;
+      border: 1px solid #444;
+      border-radius: 10px;
+      background: #1a1a1a;
+      font-size: .95rem;
+    }
+    .ok  { color: #9ccc65; }
+    .err { color: #ef5350; }
+    .mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
   </style>
 </head>
 <body>
@@ -35,21 +46,26 @@
   <canvas id="stage" width="640" height="360"></canvas>
 
   <div class="actions">
-    <button id="playBtn">Tocar 🎵</button>
-    <button id="pauseBtn">Pausar ⏸️</button>
+    <button id="playBtn" disabled>Tocar 🎵</button>
+    <button id="pauseBtn" disabled>Pausar ⏸️</button>
   </div>
 
-  <!-- Mostre os controlos para facilitar debug; pode remover o atributo 'controls' se quiser ocultar -->
   <audio id="audioPlayer" controls preload="auto" playsinline></audio>
-  <div id="status"></div>
+
+  <div class="card">
+    <div><strong>Estado:</strong> <span id="status">A verificar MP3…</span></div>
+    <div class="mono">Base URL: <span id="baseUrl"></span></div>
+    <div class="mono">MP3 path: <span id="mp3Path"></span></div>
+    <div class="mono">MP3 request: <span id="mp3Req"></span></div>
+    <div class="mono">Audio src final: <span id="audioSrc"></span></div>
+  </div>
 
   <script>
-    // ====== CONFIGURAÇÃO ======
-    // Caminho relativo SEM barra inicial (essencial para GitHub Pages de projeto)
-    // 👉 nome EXATO do ficheiro no repositório:
+    // ===== CONFIG =====
+    // 👉 Caminho relativo exato do ficheiro no repositório
     const MP3_PATH = 'assets/music/Abraco-de-Natal.mp3';
 
-    // ====== CANVAS (exemplo visual) ======
+    // ===== CANVAS (apenas visual) =====
     const canvas = document.getElementById('stage');
     const ctx = canvas.getContext('2d');
     ctx.fillStyle = '#4CAF50';
@@ -58,41 +74,64 @@
     ctx.font = '20px sans-serif';
     ctx.fillText('Clique em "Tocar 🎵" para reproduzir a música', 20, 170);
 
-    // ====== PLAYER ======
-    const audio = document.getElementById('audioPlayer');
+    // ===== ELEMENTOS =====
+    const audio   = document.getElementById('audioPlayer');
     const playBtn = document.getElementById('playBtn');
-    const pauseBtn = document.getElementById('pauseBtn');
-    const statusEl = document.getElementById('status');
+    const pauseBtn= document.getElementById('pauseBtn');
+    const statusEl= document.getElementById('status');
+    const baseEl  = document.getElementById('baseUrl');
+    const pathEl  = document.getElementById('mp3Path');
+    const reqEl   = document.getElementById('mp3Req');
+    const srcEl   = document.getElementById('audioSrc');
 
-    const setStatus = (msg) => { statusEl.textContent = msg || ''; console.log('[Player]', msg); };
+    const baseUrl = location.origin + location.pathname.replace(/index\.html$/, '');
+    baseEl.textContent = baseUrl;
+    pathEl.textContent = MP3_PATH;
 
-    // 1) Verificar se o ficheiro existe (HEAD) e preparar o src com cache-buster
+    const setStatus = (msg, cls) => {
+      statusEl.textContent = msg || '';
+      statusEl.className = cls || '';
+      console.log('[Player]', msg);
+    };
+
+    // ===== Verificar o MP3 (HEAD) + preparar src =====
     (async () => {
       try {
+        const absoluteHeadUrl = new URL(MP3_PATH, baseUrl).href;
+        reqEl.textContent = absoluteHeadUrl;
+
         const r = await fetch(MP3_PATH, { method: 'HEAD', cache: 'no-store' });
         if (!r.ok) {
-          throw new Error('MP3 não encontrado (' + r.status + '). Verifique nome/caminho.');
+          throw new Error(`MP3 não encontrado. HTTP ${r.status}. Verifique nome/pasta/caso.`);
         }
-        // Força atualização evitando versões em cache do HTML/asset
-        audio.src = MP3_PATH + '?v=' + Date.now();
+
+        // cache-buster para evitar servir versão antiga
+        const finalSrc = MP3_PATH + '?v=' + Date.now();
+        audio.src = finalSrc;
         audio.preload = 'auto';
-        setStatus('MP3 encontrado. Pronto para tocar.');
+
+        srcEl.textContent = new URL(finalSrc, baseUrl).href;
+        setStatus('MP3 encontrado (200). Pronto para tocar.', 'ok');
+
+        playBtn.disabled = false;
+        pauseBtn.disabled = false;
       } catch (err) {
         console.error(err);
-        setStatus('❌ ' + err.message);
+        setStatus('❌ ' + err.message, 'err');
+        srcEl.textContent = '(não definido — erro ao localizar ficheiro)';
         playBtn.disabled = true;
         pauseBtn.disabled = true;
       }
     })();
 
-    // 2) Controlos
+    // ===== Controlos =====
     playBtn.addEventListener('click', async () => {
       try {
-        await audio.play(); // gesto do utilizador na MESMA aba → permitido
-        setStatus('A reproduzir ✅');
+        await audio.play();   // gesto do utilizador na MESMA aba → permitido
+        setStatus('A reproduzir ✅', 'ok');
       } catch (err) {
         console.error(err);
-        setStatus('Não foi possível reproduzir. Veja o Console (F12).');
+        setStatus('Não foi possível reproduzir. Abra F12 → Console/Network.', 'err');
       }
     });
 
@@ -101,12 +140,13 @@
       setStatus('Pausado ⏸️');
     });
 
-    // 3) Eventos úteis para debug
     audio.addEventListener('loadedmetadata', () => {
       const dur = isFinite(audio.duration) ? audio.duration.toFixed(1) + 's' : 'desconhecida';
       setStatus('Carregado. Duração: ' + dur);
     });
-    audio.addEventListener('error', () => setStatus('Erro ao carregar áudio (abra F12 → Network/Console).'));
-    audio.addEvent    audio.addEventListener('ended', () => setStatus('Terminou a reprodução.'));
+    audio.addEventListener('error', () => setStatus('Erro ao carregar áudio (Network/Console).', 'err'));
+    audio.addEventListener('ended', () => setStatus('Terminou a reprodução.'));
   </script>
-</body>
+</</body>
+
+
